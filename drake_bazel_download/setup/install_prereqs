@@ -34,6 +34,9 @@ set -euxo pipefail
 # Download binaries from the latest nightly release by default.
 package_url=https://drake-packages.csail.mit.edu/drake/nightly/drake-latest-noble.tar.gz
 
+# Control apt behavior (avoids sudo)
+run_apt=true
+
 while [ "${1:-}" != "" ]; do
   case "$1" in
     --package-url)
@@ -44,6 +47,8 @@ while [ "${1:-}" != "" ]; do
       fi
       package_url="$1"
       ;;
+    --run-apt) run_apt=true ;;
+    --no-run-apt) run_apt=false ;;
     *)
       echo 'Invalid command line argument' >&2
       exit 1
@@ -61,12 +66,14 @@ if [[ "$(. /etc/os-release && echo ${VERSION_CODENAME})" != 'noble' ]]; then
   exit 3
 fi
 
-${maybe_sudo} apt-get update
-${maybe_sudo} apt-get install --no-install-recommends $(cat <<EOF
+if run_apt; then
+  ${maybe_sudo} apt-get update
+  ${maybe_sudo} apt-get install --no-install-recommends $(cat <<EOF
   ca-certificates
   wget
 EOF
-)
+  )
+fi
 
 # Download the drake binary package.
 wget -O drake.tar.gz "${package_url}"
@@ -77,4 +84,4 @@ tar -xf drake.tar.gz -C $HOME
 echo -e "\ndrake VERSION.TXT: $(cat $HOME/drake/share/doc/drake/VERSION.TXT)\n"
 
 # Install the binary distribution prereqs.
-${maybe_sudo} ${HOME}/drake/share/drake/setup/install_prereqs
+# ${maybe_sudo} ${HOME}/drake/share/drake/setup/install_prereqs
